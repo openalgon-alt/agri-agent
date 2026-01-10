@@ -1,0 +1,16 @@
+langchain
+langchain-classic
+langchain-community
+langchain-core
+langchain-text-splitters
+langchain-ollama
+langchain-chroma
+langchain-google-genai
+chromadb
+pypdf
+gputil
+psutil
+docling
+langgraph
+duckduckgo-search
+requests

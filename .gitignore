@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+*.env
+
+# Javascript / Typescript
+node_modules/
+dist/
+.DS_Store
+
+# VS Code
+.vscode/
+
+# Project Specific Data (Large Files)
+# Vector DBs
+chroma_db_pro/
+chroma_db_v2/
+
+# Logs
+*.log
+ollama_debug.log
+ollama_gpu.log
+ollama_vulkan.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Generated Media
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
