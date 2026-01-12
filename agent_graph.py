@@ -12,10 +12,20 @@ from tools import librarian_tools, analyst_tools
 
 # --- CONFIGURATION ---
 # --- CONFIGURATION ---
+import os
+
+# --- CONFIGURATION ---
 MODEL_NAME = "qwen3-vl" # Standard Int4 version for speed/VRAM
+OLLAMA_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+
 # Increase context to Avoid VRAM overflow but allow RAG
+<<<<<<< HEAD
 llm = ChatOllama(model=MODEL_NAME, temperature=0, num_ctx=32768) 
 worker_llm = ChatOllama(model=MODEL_NAME, temperature=0, num_ctx=32768)
+=======
+llm = ChatOllama(model=MODEL_NAME, temperature=0, num_ctx=2048, base_url=OLLAMA_URL) 
+worker_llm = ChatOllama(model=MODEL_NAME, temperature=0, num_ctx=2048, base_url=OLLAMA_URL)
+>>>>>>> 5d2a40eadcb83232ff42c8e6eb51df424f9c44e5
 
 # --- STATE ---
 class AgentState(TypedDict):

@@ -22,7 +22,8 @@ class RAGEngine:
     def __init__(self, pdf_folder="./pdfs", db_dir="./chroma_db_pro"):
         self.pdf_folder = pdf_folder
         self.db_dir = db_dir
-        self.embeddings = OllamaEmbeddings(model="nomic-embed-text")
+        self.ollama_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+        self.embeddings = OllamaEmbeddings(model="nomic-embed-text", base_url=self.ollama_url)
         self.vector_db = None
 
     def initialize_db(self, progress_callback=None):
@@ -107,7 +108,21 @@ class RAGEngine:
         if not self.vector_db:
             return None
 
+<<<<<<< HEAD
         llm = ChatOllama(model="qwen3-vl", temperature=0, num_ctx=4096)
+=======
+        # 1. Select LLM
+        if model_type == "cloud":
+            if not ChatGoogleGenerativeAI:
+                return "ERROR: `langchain-google-genai` not installed."
+            if not api_key:
+                return "ERROR: Google API Key required for Cloud model."
+            
+            llm = ChatGoogleGenerativeAI(model="gemini-pro", google_api_key=api_key, temperature=0.3)
+        else:
+            # Switch between local models
+            llm = ChatOllama(model=local_model, temperature=0, base_url=self.ollama_url)
+>>>>>>> 5d2a40eadcb83232ff42c8e6eb51df424f9c44e5
 
         # 2. Optimized Prompt
         # We inject the catalog directly into the system instructions if provided.
@@ -154,7 +169,11 @@ class RAGEngine:
     def extract_metadata_from_text(self, text: str):
         """Uses LLM to extract title and authors from text."""
         try:
+<<<<<<< HEAD
             llm = ChatOllama(model="qwen3-vl", temperature=0, format="json")
+=======
+            llm = ChatOllama(model="llama3.2", temperature=0, format="json", base_url=self.ollama_url)
+>>>>>>> 5d2a40eadcb83232ff42c8e6eb51df424f9c44e5
             prompt = f"""Extract the 'title' and 'authors' (list of strings) from the following text. 
             Return ONLY valid JSON.
             
