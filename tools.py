@@ -26,8 +26,24 @@ def library_search(query: str):
     if not rag_engine.vector_db:
         return "The library is closed (Vector DB not initialized). Please check Admin Dashboard."
     
-    # Use retrieval directly
-    docs = rag_engine.search(query, k=1)
+    # 1. Handle "List All" Intent
+    q_lower = query.lower()
+    if "list" in q_lower and ("all" in q_lower or "article" in q_lower or "pdf" in q_lower):
+        all_docs = rag_engine.list_documents()
+        if not all_docs:
+            return "The library is empty."
+        
+        # Determine strictness: if just "list all", return everything. 
+        # But to be safe for Context Window, limiting to 50 titles or using a summarized format.
+        response = "**Master Catalog of Articles:**\n\n"
+        for idx, doc in enumerate(all_docs):
+            title = doc.get('title', 'Unknown Title')
+            authors = ", ".join(doc.get('authors', ['Unknown']))
+            response += f"{idx+1}. **{title}** by {authors}\n"
+        return response
+
+    # 2. Semantic Search (Increased k=5 for better recall)
+    docs = rag_engine.search(query, k=5)
     if not docs:
         return "No relevant documents found in the local archives."
     

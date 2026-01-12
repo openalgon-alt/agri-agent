@@ -13,6 +13,12 @@ interface Message {
   timestamp: number;
 }
 
+interface DebugLog {
+  timestamp: string;
+  node: string;
+  output: any;
+}
+
 // --- COMPONENTS ---
 
 const Sidebar = ({ activeTab, onTabChange }: { activeTab: string, onTabChange: (tab: string) => void }) => (
@@ -27,11 +33,61 @@ const Sidebar = ({ activeTab, onTabChange }: { activeTab: string, onTabChange: (
       <Database size={24} />
     </button>
 
+    <button onClick={() => onTabChange('debug')} className={clsx("p-2 rounded-lg transition-colors", activeTab === 'debug' ? "bg-mw-primary/10 text-mw-primary" : "text-gray-500 hover:bg-black/5")}>
+      <div className="relative">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="8" height="14" x="8" y="6" rx="4" /><path d="m19 7-3 2" /><path d="m5 7 3 2" /><path d="m19 19-3-2" /><path d="m5 19 3-2" /><path d="M20 13h-4" /><path d="M4 13h4" /><path d="m10 4 1 2" /><path d="m14 4-1 2" /></svg>
+      </div>
+    </button>
+
     <button onClick={() => onTabChange('settings')} className={clsx("p-2 rounded-lg transition-colors", activeTab === 'settings' ? "bg-mw-primary/10 text-mw-primary" : "text-gray-500 hover:bg-black/5")}>
       <Settings size={24} />
     </button>
   </div>
 );
+
+const DebugView = ({ logs }: { logs: DebugLog[] }) => {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [logs]);
+
+  return (
+    <div className="flex flex-col h-screen bg-[#1E1E1E] text-gray-300 font-mono text-sm">
+      <div className="p-4 border-b border-gray-700 bg-[#252526] flex justify-between items-center sticky top-0 z-10">
+        <h2 className="font-bold text-white flex items-center gap-2">
+          <span className="text-green-500">●</span> Live Workflow Console
+        </h2>
+        <span className="text-xs px-2 py-1 bg-gray-800 rounded">{logs.length} Events</span>
+      </div>
+
+      <div className="flex-1 overflow-auto p-4 space-y-4">
+        {logs.length === 0 && (
+          <div className="text-center text-gray-600 mt-20 italic">Waiting for graph events...</div>
+        )}
+        {logs.map((log, i) => (
+          <div key={i} className="border-l-2 border-gray-600 pl-4 py-1 animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <div className="flex items-center gap-3 mb-2">
+              <span className="text-xs text-gray-500">{new Date(parseFloat(log.timestamp) * 1000).toLocaleTimeString()}</span>
+              <span className={clsx(
+                "text-xs font-bold px-2 py-0.5 rounded uppercase",
+                log.node === "Supervisor" ? "bg-blue-900 text-blue-200" :
+                  log.node === "Librarian" ? "bg-purple-900 text-purple-200" :
+                    log.node === "Analyst" ? "bg-amber-900 text-amber-200" :
+                      "bg-gray-700"
+              )}>{log.node}</span>
+            </div>
+            <div className="bg-[#000000] p-3 rounded-md overflow-x-auto border border-gray-800">
+              <pre className="text-xs leading-relaxed text-green-400">
+                {JSON.stringify(log.output, null, 2)}
+              </pre>
+            </div>
+          </div>
+        ))}
+        <div ref={scrollRef} />
+      </div>
+    </div>
+  );
+};
 
 const SettingsView = () => (
   <div className="p-8 max-w-2xl mx-auto">
@@ -287,6 +343,7 @@ function App() {
     }
   ]);
   const [isThinking, setIsThinking] = useState(false);
+  const [debugLogs, setDebugLogs] = useState<DebugLog[]>([]); // NEW STATE
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -356,26 +413,22 @@ function App() {
             try {
               const data = JSON.parse(dataStr);
 
+              // --- HANDLE DEBUG EVENTS ---
+              if (data.type === 'debug') {
+                setDebugLogs(prev => [...prev, data]);
+                continue; // Skip the regular message processing
+              }
+              // ---------------------------
+
               setMessages(prev => prev.map(msg => {
                 if (msg.id === aiMsgId) {
                   if (data.type === 'thought') {
-                    // Append thought or replace? Usually streams chunks.
-                    // Our backend sends full thought chunks usually.
-                    // Let's just append for now with newline
                     return {
                       ...msg,
                       thought: msg.thought ? msg.thought + '\n > ' + data.content : ' > ' + data.content
                     };
                   }
                   if (data.type === 'answer') {
-                    return { ...msg, content: msg.content + data.content }; // Streaming content?
-                    // Backend currently sends full answer in one block for 'final_answer' in graph
-                    // But graph.stream sends chunks...
-                    // Actually my backend code sends: chunk["content"] = value["messages"][0].content
-                    // which is the WHOLE final answer. So we should replace/set.
-                    // But typically we want to stream tokens. LangGraph stream returns node output.
-                    // So it is the full block.
-                    // For now, let's just set it.
                     return { ...msg, content: data.content };
                   }
                 }
@@ -410,11 +463,13 @@ function App() {
             {activeTab === 'chat' && "AgriCatalogues AI"}
             {activeTab === 'admin' && "Knowledge Base"}
             {activeTab === 'settings' && "Settings"}
+            {activeTab === 'debug' && "Debug Console"}
           </h2>
         </header>
 
         {/* CONTENT */}
-        {/* CONTENT */}
+        {activeTab === 'debug' && <DebugView logs={debugLogs} />}
+
         {activeTab === 'chat' && (
           <>
             <div className="pt-8 pb-32 px-8 max-w-4xl mx-auto min-h-screen">

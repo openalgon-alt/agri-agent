@@ -8,10 +8,8 @@ from langchain_ollama import OllamaEmbeddings, ChatOllama
 from langchain_chroma import Chroma
 from langchain_core.prompts import PromptTemplate
 from langchain_classic.chains import RetrievalQA
-try:
-    from langchain_google_genai import ChatGoogleGenerativeAI
-except ImportError:
-    ChatGoogleGenerativeAI = None # Handle gracefully if not installed
+# Removed Google Gemini Import
+# from langchain_google_genai import ChatGoogleGenerativeAI
 
 from langchain_core.documents import Document
 try:
@@ -39,6 +37,17 @@ class RAGEngine:
 
         # Otherwise, load from PDFs
         return self._rebuild_index(progress_callback)
+
+    def list_documents(self):
+        """Returns a list of all indexed documents from metadata."""
+        metadata_path = "./metadata.json"
+        if os.path.exists(metadata_path):
+            try:
+                with open(metadata_path, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            except:
+                return []
+        return []
 
     def _rebuild_index(self, progress_callback=None):
         if progress_callback: progress_callback(10, "Scanning PDFs...")
@@ -94,21 +103,11 @@ class RAGEngine:
         if progress_callback: progress_callback(100, "Indexing Complete!")
         return self.vector_db, chunks
 
-    def get_qa_chain(self, model_type="local", api_key=None, catalog_context="", local_model="llama3.2"):
+    def get_qa_chain(self, catalog_context=""):
         if not self.vector_db:
             return None
 
-        # 1. Select LLM
-        if model_type == "cloud":
-            if not ChatGoogleGenerativeAI:
-                return "ERROR: `langchain-google-genai` not installed."
-            if not api_key:
-                return "ERROR: Google API Key required for Cloud model."
-            
-            llm = ChatGoogleGenerativeAI(model="gemini-pro", google_api_key=api_key, temperature=0.3)
-        else:
-            # Switch between local models
-            llm = ChatOllama(model=local_model, temperature=0)
+        llm = ChatOllama(model="qwen3-vl", temperature=0, num_ctx=4096)
 
         # 2. Optimized Prompt
         # We inject the catalog directly into the system instructions if provided.
@@ -155,7 +154,7 @@ class RAGEngine:
     def extract_metadata_from_text(self, text: str):
         """Uses LLM to extract title and authors from text."""
         try:
-            llm = ChatOllama(model="llama3.2", temperature=0, format="json")
+            llm = ChatOllama(model="qwen3-vl", temperature=0, format="json")
             prompt = f"""Extract the 'title' and 'authors' (list of strings) from the following text. 
             Return ONLY valid JSON.
             

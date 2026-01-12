@@ -52,17 +52,33 @@ async def stream_generator(message: str, history: List[dict]):
         # Stream from Graph
         for event in graph.stream(inputs):
             for key, value in event.items():
+                # --- NEW: SEND DEBUG EVENT ---
+                debug_payload = {
+                    "type": "debug",
+                    "node": key,
+                    "output": value, # serializable dict
+                    "timestamp": str(asyncio.get_event_loop().time())
+                }
+                # Use default=str to handle non-serializable objects if any
+                yield f"data: {json.dumps(debug_payload, default=str)}\n\n"
+                # -----------------------------
+
+                print(f"\n--- DEBUG EVENT: {key} ---")
+                print(str(value)) # Print FULL content
+                print("--------------------------\n")
                 chunk = {}
                 
                 if key == "Supervisor":
                     if "thought" in value:
-                        chunk["type"] = "thought"
-                        chunk["content"] = value["thought"]
+                        chunk_thought = {"type": "thought", "content": value["thought"]}
+                        yield f"data: {json.dumps(chunk_thought)}\n\n"
+                        await asyncio.sleep(0.02)
                         
                     # Check for Final Answer
                     if "messages" in value and value["next"] == "FINISH":
-                        chunk["type"] = "answer"
-                        chunk["content"] = value["messages"][0].content
+                        chunk_ans = {"type": "answer", "content": value["messages"][0].content}
+                        yield f"data: {json.dumps(chunk_ans)}\n\n"
+                        continue # Skip the default yield at bottom
                         
                 elif key == "Librarian":
                     # Intermediate update
